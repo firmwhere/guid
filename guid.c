@@ -32,20 +32,26 @@ bool is_guid_stdtxt(char *guid) {
     return true;
 }
 
-void hex_to_upper(char *string) {
+void guid_hex_to_case(char *string, bool upper_or_lower) {
     if (string == NULL) {
         printf("ERR: invalid arguments in %s\n", __func__);
         return;
     }
 
     for (int i = 0; string[i] != '\0'; i++) {
-        if (string[i] >= 'a' && string[i] <= 'f') {
-            string[i] = toupper(string[i]);
+        if (upper_or_lower) {
+            if (string[i] >= 'a' && string[i] <= 'f') {
+                string[i] = toupper(string[i]);
+            }
+        } else {
+            if (string[i] >= 'A' && string[i] <= 'F') {
+                string[i] = tolower(string[i]);
+            }
         }
     }
 }
 
-void uefi_guid_stdtxt_unparse(const uuid_t uuid, char *string, bool upper)
+void uefi_guid_stdtxt_unparse(const uuid_t uuid, char *string, bool upper_or_lower)
 {
     if (string == NULL) {
         printf("ERR: invalid arguments in %s\n", __func__);
@@ -59,12 +65,10 @@ void uefi_guid_stdtxt_unparse(const uuid_t uuid, char *string, bool upper)
         uuid[7], uuid[6],
         uuid[8], uuid[9], uuid[10], uuid[11], uuid[12], uuid[13], uuid[14], uuid[15]
     );
-    if (upper) {
-        hex_to_upper(string);
-    }
+    guid_hex_to_case(string, upper_or_lower);
 }
 
-void uefi_guid_memmap_unparse(const uuid_t uuid, char *string, bool upper)
+void uefi_guid_memmap_unparse(const uuid_t uuid, char *string, bool upper_or_lower)
 {
     if (string == NULL) {
         printf("ERR: invalid arguments in %s\n", __func__);
@@ -78,12 +82,10 @@ void uefi_guid_memmap_unparse(const uuid_t uuid, char *string, bool upper)
         uuid[6], uuid[7],
         uuid[8], uuid[9], uuid[10], uuid[11], uuid[12], uuid[13], uuid[14], uuid[15]
     );
-    if (upper) {
-        hex_to_upper(string);
-    }
+    guid_hex_to_case(string, upper_or_lower);
 }
 
-void ipmi_uuid_memmap_unparse(const uuid_t uuid, char *string, bool upper)
+void ipmi_uuid_memmap_unparse(const uuid_t uuid, char *string, bool upper_or_lower)
 {
     if (string == NULL) {
         printf("ERR: invalid arguments in %s\n", __func__);
@@ -98,12 +100,10 @@ void ipmi_uuid_memmap_unparse(const uuid_t uuid, char *string, bool upper)
         uuid[4], uuid[5],
         uuid[0], uuid[1], uuid[2], uuid[3]
     );
-    if (upper) {
-        hex_to_upper(string);
-    }
+    guid_hex_to_case(string, upper_or_lower);
 }
 
-void uefi_guid_member_unparse(const uuid_t uuid, char *string, bool upper)
+void uefi_guid_member_unparse(const uuid_t uuid, char *string, bool upper_or_lower)
 {
     if (string == NULL) {
         printf("ERR: invalid arguments in %s\n", __func__);
@@ -117,12 +117,10 @@ void uefi_guid_member_unparse(const uuid_t uuid, char *string, bool upper)
         uuid[7], uuid[6],
         uuid[8], uuid[9], uuid[10], uuid[11], uuid[12], uuid[13], uuid[14], uuid[15]
     );
-    if (upper) {
-        hex_to_upper(string);
-    }
+    guid_hex_to_case(string, upper_or_lower);
 }
 
-void uefi_guid_struct_unparse(const uuid_t uuid, char *string, bool upper)
+void uefi_guid_struct_unparse(const uuid_t uuid, char *string, bool upper_or_lower)
 {
     char string_member[] = "0x00112233, 0x4455, 0x6677, { 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF }";
 
@@ -131,12 +129,12 @@ void uefi_guid_struct_unparse(const uuid_t uuid, char *string, bool upper)
         return;
     }
 
-    uefi_guid_member_unparse(uuid, string_member, upper);
+    uefi_guid_member_unparse(uuid, string_member, upper_or_lower);
 
     sprintf(string, "{ %s }", string_member);
 }
 
-void uefi_guid_define_unparse(const uuid_t uuid, char *string, bool upper)
+void uefi_guid_define_unparse(const uuid_t uuid, char *string, bool upper_or_lower)
 {
     char string_member[] = "0x00112233, 0x4455, 0x6677, { 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF }";
 
@@ -145,7 +143,7 @@ void uefi_guid_define_unparse(const uuid_t uuid, char *string, bool upper)
         return;
     }
 
-    uefi_guid_member_unparse(uuid, string_member, upper);
+    uefi_guid_member_unparse(uuid, string_member, upper_or_lower);
 
     sprintf(string,
         "#define GUID \\\n"
@@ -225,6 +223,7 @@ int arguments_init(int argc, char **argv, arguments_t *options)
         { 0           , 0, 0,  0  }
     };
 
+    options->upper = false;
     while((opt = getopt_long(argc, argv, "g:hu",long_options, &option_index))!=EOF ) {
         switch (opt) {
         case 'g':
