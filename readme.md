@@ -1,4 +1,4 @@
-## cbup.exe
+## guid
 
 ```shell
 guid - generate guid for uefi development. @efikarl@yeah.net
@@ -9,6 +9,18 @@ options:
 flags:
     -h  --help             output help info
     -u, --upper            output uppercase result, or lowercase
+```
+
+### build
+
+```shell
+# macos
+$ clang guid.c -oguid
+
+# linux
+$ clang guid.c -oguid -luuid
+# or
+$ gcc   guid.c -oguid -luuid
 ```
 
 ### examples
