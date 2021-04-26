@@ -15,6 +15,10 @@
 #include <getopt.h>
 #include <uuid/uuid.h>
 
+#ifdef __GNUC__
+#include <stdint.h>
+#endif
+
 #define UEFI_GUID_STD_TXT_SIZE 0x25
 #define UEFI_GUID_STR_MAX_SIZE 0x85
 
@@ -223,7 +227,6 @@ int arguments_init(int argc, char **argv, arguments_t *options)
         { 0           , 0, 0,  0  }
     };
 
-    options->upper = false;
     while((opt = getopt_long(argc, argv, "g:hu",long_options, &option_index))!=EOF ) {
         switch (opt) {
         case 'g':
@@ -245,13 +248,13 @@ int arguments_init(int argc, char **argv, arguments_t *options)
 
 int main(int argc, char **argv)
 {
-    arguments_t     options;
+    arguments_t     options = { .upper = 0 };
     if (!arguments_init(argc, argv, &options)) {
         help();
         return 1;
     }
 
-    uuid_t          uuid;
+    uuid_t          uuid    = { 0 };
     if (options.guid.flag) {
         uuid_parse(options.guid.value.string, uuid);
     } else {
