@@ -158,35 +158,6 @@ void uefi_guid_define_unparse(const uuid_t uuid, char *string, bool upper_or_low
     , string_member);
 }
 
-void guid_result_output(
-    const char* guid_stdtxt,
-    const char* uefi_memmap,
-    const char* ipmi_memmap,
-    const char* uefi_guid_struct_string,
-    const char* uefi_guid_define_string
-    )
-{
-    if (guid_stdtxt == NULL || uefi_memmap == NULL || ipmi_memmap == NULL || uefi_guid_struct_string == NULL || uefi_guid_define_string == NULL ){
-        printf("ERR: invalid arguments in %s\n", __func__);
-        return;
-    }
-
-    printf(
-        "\n"
-        "[guid.std.text] %s\n"
-        "  [uefi.memmap] %s\n"
-        "  [ipmi.memmap] %s\n"
-        "\n"
-        "[uefi.guid.struct]\n"
-        "%s\n"
-        "\n"
-        "[uefi.guid.define]\n"
-        "%s\n"
-        "\n",
-        guid_stdtxt, uefi_memmap, ipmi_memmap, uefi_guid_struct_string, uefi_guid_define_string
-    );
-}
-
 typedef struct {
     bool                flag;
     union {
@@ -197,7 +168,8 @@ typedef struct {
 
 typedef struct {
     argument_t          guid;
-    bool                upper;
+    bool                uppercase;
+    bool                standard;
 } arguments_t;
 
 void help()
@@ -210,8 +182,9 @@ void help()
         "    -g, --guid <guid>      generate guid from <guid>\n"
         "\n"
         "flags:\n"
-        "    -h  --help             output help info\n"
-        "    -u, --upper            output uppercase result, or lowercase\n"
+        "    -h, --help             output help info\n"
+        "        --uppercase        output uppercase result, or lowercase\n"
+        "        --standard         output guid standard text result only\n"
         "\n"
         );
 }
@@ -223,11 +196,12 @@ int arguments_init(int argc, char **argv, arguments_t *options)
     struct option       long_options[] = {
         { "guid"      , 1, 0, 'g' },
         { "help"      , 0, 0, 'h' },
-        { "upper"     , 0, 0, 'u' },
+        { "uppercase" , 0, 0, '0' },
+        { "standard"  , 0, 0, '1' },
         { 0           , 0, 0,  0  }
     };
 
-    while((opt = getopt_long(argc, argv, "g:hu",long_options, &option_index))!=EOF ) {
+    while((opt = getopt_long(argc, argv, "g:h",long_options, &option_index))!=EOF ) {
         switch (opt) {
         case 'g':
             if (!is_guid_stdtxt(optarg)) {
@@ -236,8 +210,11 @@ int arguments_init(int argc, char **argv, arguments_t *options)
             options->guid.flag          = true;
             options->guid.value.string  = optarg;
             break;
-        case 'u':
-            options->upper = true;
+        case '0':
+            options->uppercase = true;
+            break;
+        case '1':
+            options->standard  = true;
             break;
         default:
             return false;
@@ -246,9 +223,48 @@ int arguments_init(int argc, char **argv, arguments_t *options)
     return true;
 }
 
+typedef struct {
+    char guid_stdtxt[UEFI_GUID_STD_TXT_SIZE];
+    char uefi_memmap[UEFI_GUID_STD_TXT_SIZE];
+    char ipmi_memmap[UEFI_GUID_STD_TXT_SIZE];
+    char uefi_guid_struct_string[UEFI_GUID_STR_MAX_SIZE];
+    char uefi_guid_define_string[UEFI_GUID_STR_MAX_SIZE];
+} guids_t;
+
+void guid_result_output_handler(
+    const uuid_t        uuid,
+    const arguments_t   options
+    )
+{
+    guids_t guids = { 0 };
+    uefi_guid_stdtxt_unparse(uuid, guids.guid_stdtxt, options.uppercase);
+    if (options.standard) {
+        printf("%s\n", guids.guid_stdtxt);
+        return;
+    };
+    uefi_guid_memmap_unparse(uuid, guids.uefi_memmap, options.uppercase);
+    ipmi_uuid_memmap_unparse(uuid, guids.ipmi_memmap, options.uppercase);
+    uefi_guid_struct_unparse(uuid, guids.uefi_guid_struct_string, options.uppercase);
+    uefi_guid_define_unparse(uuid, guids.uefi_guid_define_string, options.uppercase);
+    printf(
+        "\n"
+        "[guid.std.text] %s\n"
+        "  [uefi.memmap] %s\n"
+        "  [ipmi.memmap] %s\n"
+        "\n"
+        "[uefi.guid.struct]\n"
+        "%s\n"
+        "\n"
+        "[uefi.guid.define]\n"
+        "%s\n"
+        "\n",
+        guids.guid_stdtxt, guids.uefi_memmap, guids.ipmi_memmap, guids.uefi_guid_struct_string, guids.uefi_guid_define_string
+    );
+}
+
 int main(int argc, char **argv)
 {
-    arguments_t     options = { .upper = 0 };
+    arguments_t     options = { .uppercase = 0 };
     if (!arguments_init(argc, argv, &options)) {
         help();
         return 1;
@@ -261,18 +277,6 @@ int main(int argc, char **argv)
         uuid_generate(uuid);
     }
 
-    char guid_stdtxt[UEFI_GUID_STD_TXT_SIZE]             = { 0 };
-    char uefi_memmap[UEFI_GUID_STD_TXT_SIZE]             = { 0 };
-    char ipmi_memmap[UEFI_GUID_STD_TXT_SIZE]             = { 0 };
-    char uefi_guid_struct_string[UEFI_GUID_STR_MAX_SIZE] = { 0 };
-    char uefi_guid_define_string[UEFI_GUID_STR_MAX_SIZE] = { 0 };
-
-    uefi_guid_stdtxt_unparse(uuid, guid_stdtxt, options.upper);
-    uefi_guid_memmap_unparse(uuid, uefi_memmap, options.upper);
-    ipmi_uuid_memmap_unparse(uuid, ipmi_memmap, options.upper);
-    uefi_guid_struct_unparse(uuid, uefi_guid_struct_string, options.upper);
-    uefi_guid_define_unparse(uuid, uefi_guid_define_string, options.upper);
-
-    guid_result_output(guid_stdtxt, uefi_memmap, ipmi_memmap, uefi_guid_struct_string, uefi_guid_define_string);
+    guid_result_output_handler(uuid, options);
     return 0;
 }
