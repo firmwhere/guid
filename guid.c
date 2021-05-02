@@ -22,7 +22,7 @@
 #define UEFI_GUID_STD_TXT_SIZE 0x25
 #define UEFI_GUID_STR_MAX_SIZE 0x85
 
-bool is_guid_stdtxt(char *guid) {
+bool is_guid_stdtxt_format(char *guid) {
     char guid_stdtxt[] = "00112233-4455-6677-8899-AABBCCDDEEFF";
 
     for (int i = 0; guid[i] != '\0'; i++) {
@@ -53,6 +53,45 @@ void guid_hex_to_case(char *string, bool upper_or_lower) {
             }
         }
     }
+}
+
+char *guid_stdtxt_to_uefi_memmap(char *stdtxt) {
+    if (stdtxt == NULL) {
+        printf("ERR: invalid arguments in %s\n", __func__);
+    }
+    if (!is_guid_stdtxt_format(stdtxt)) {
+        printf("ERR: invalid guid format: %s\n", stdtxt);
+        return NULL;
+    }
+    char *memmap = stdtxt;
+    sprintf(memmap,
+        "%c%c%c%c%c%c%c%c-%c%c%c%c-%c%c%c%c-%c%c%c%c-%c%c%c%c%c%c%c%c%c%c%c%c",
+        memmap[ 6], memmap[ 7], memmap[ 4], memmap[ 5], memmap[ 2], memmap[ 3], memmap[ 0], memmap[ 1],
+        memmap[11], memmap[12], memmap[ 9], memmap[10],
+        memmap[16], memmap[17], memmap[14], memmap[15],
+        memmap[19], memmap[20], memmap[21], memmap[22],
+        memmap[24], memmap[25], memmap[26], memmap[27], memmap[28], memmap[29], memmap[30], memmap[31], memmap[32], memmap[33], memmap[34], memmap[35]
+    );
+    return memmap;
+}
+
+char *ipmi_memmap_to_uefi_memmap(char *memmap) {
+    if (memmap == NULL) {
+        printf("ERR: invalid arguments in %s\n", __func__);
+    }
+    if (!is_guid_stdtxt_format(memmap)) {
+        printf("ERR: invalid guid format: %s\n", memmap);
+        return NULL;
+    }
+    sprintf(memmap,
+        "%c%c%c%c%c%c%c%c-%c%c%c%c-%c%c%c%c-%c%c%c%c-%c%c%c%c%c%c%c%c%c%c%c%c",
+        memmap[28], memmap[29], memmap[30], memmap[31], memmap[32], memmap[33], memmap[34], memmap[35],
+        memmap[24], memmap[25], memmap[26], memmap[27],
+        memmap[19], memmap[20], memmap[21], memmap[22],
+        memmap[14], memmap[15], memmap[16], memmap[17],
+        memmap[ 0], memmap[ 1], memmap[ 2], memmap[ 3], memmap[ 4], memmap[ 5], memmap[ 6], memmap[ 7], memmap[ 9], memmap[ 10], memmap[11], memmap[12]
+    );
+    return memmap;
 }
 
 void uefi_guid_stdtxt_unparse(const uuid_t uuid, char *string, bool upper_or_lower)
@@ -97,7 +136,7 @@ void ipmi_uuid_memmap_unparse(const uuid_t uuid, char *string, bool upper_or_low
     }
 
     sprintf(string,
-        "%02x%02x%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x",
+        "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
         uuid[10], uuid[11], uuid[12], uuid[13], uuid[14], uuid[15],
         uuid[8], uuid[9],
         uuid[6], uuid[7],
@@ -162,12 +201,14 @@ typedef struct {
     bool                flag;
     union {
         uint64_t        number;
-        char           *string; 
+        char           *string;
     }                   value;
 } argument_t;
 
 typedef struct {
     argument_t          guid;
+    bool                uefi;
+    bool                ipmi;
     bool                uppercase;
     bool                standard;
 } arguments_t;
@@ -180,14 +221,23 @@ void help()
         "\n"
         "options:\n"
         "    -g, --guid <guid>      generate guid from <guid>\n"
+        "    -u, --uefi <memmap>    generate guid from uefi <memmap>\n"
+        "    -i, --ipmi <memmap>    generate guid from ipmi <memmap>\n"
         "\n"
         "flags:\n"
         "    -h, --help             output help info\n"
         "        --uppercase        output uppercase result, or lowercase\n"
-        "        --standard         output guid standard text result only\n"
+        "    -s, --standard         output guid standard text result only\n"
         "\n"
         );
 }
+
+typedef struct {
+  uint64_t  data1;
+  uint16_t  data2;
+  uint16_t  data3;
+  uint8_t   data4[8];
+} efi_guid_t;
 
 int arguments_init(int argc, char **argv, arguments_t *options)
 {
@@ -195,25 +245,44 @@ int arguments_init(int argc, char **argv, arguments_t *options)
     int                 option_index = 0;
     struct option       long_options[] = {
         { "guid"      , 1, 0, 'g' },
+        { "uefi"      , 1, 0, 'u' },
+        { "ipmi"      , 1, 0, 'i' },
         { "help"      , 0, 0, 'h' },
         { "uppercase" , 0, 0, '0' },
-        { "standard"  , 0, 0, '1' },
+        { "standard"  , 0, 0, 's' },
         { 0           , 0, 0,  0  }
     };
 
-    while((opt = getopt_long(argc, argv, "g:h",long_options, &option_index))!=EOF ) {
+    while((opt = getopt_long(argc, argv, "g:u:i:hs",long_options, &option_index))!=EOF ) {
         switch (opt) {
         case 'g':
-            if (!is_guid_stdtxt(optarg)) {
+            options->guid.value.string  = guid_stdtxt_to_uefi_memmap(optarg);
+            if (!options->guid.value.string) {
                 return false;
             }
             options->guid.flag          = true;
+            break;
+        case 'u':
             options->guid.value.string  = optarg;
+            if (!is_guid_stdtxt_format(optarg)) {
+                printf("ERR: invalid guid format: %s\n", optarg);
+                return false;
+            }
+            options->uefi               = true;
+            options->guid.flag          = true;
+            break;
+        case 'i':
+            options->guid.value.string  = ipmi_memmap_to_uefi_memmap(optarg);
+            if (!options->guid.value.string) {
+                return false;
+            }
+            options->ipmi               = true;
+            options->guid.flag          = true;
             break;
         case '0':
             options->uppercase = true;
             break;
-        case '1':
+        case 's':
             options->standard  = true;
             break;
         default:

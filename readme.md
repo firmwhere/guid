@@ -5,10 +5,13 @@ guid - generate guid for uefi development. @efikarl@yeah.net
 
 options:
     -g, --guid <guid>      generate guid from <guid>
+    -u, --uefi <memmap>    generate guid from uefi <memmap>
+    -i, --ipmi <memmap>    generate guid from ipmi <memmap>
 
 flags:
-    -h  --help             output help info
-    -u, --upper            output uppercase result, or lowercase
+    -h, --help             output help info
+        --uppercase        output uppercase result, or lowercase
+    -s, --standard         output guid standard text result only
 ```
 
 ### build
@@ -25,72 +28,61 @@ $ gcc   guid.c -oguid -luuid
 
 ### examples
 
-```shell
-$ ./guid -g 00112233-4455-6677-8899-AABBCCDDEEFF
-
-[guid.std.text] 33221100-5544-7766-8899-aabbccddeeff
-  [uefi.memmap] 00112233-4455-6677-8899-aabbccddeeff
-  [ipmi.memmap] aabbccddeeff-8899-6677-4455-00112233
-
-[uefi.guid.struct]
-{ 0x33221100, 0x5544, 0x7766, { 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff } }
-
-[uefi.guid.define]
-#define GUID \
-  { \
-    0x33221100, 0x5544, 0x7766, { 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff } \
-  }
-extern EFI_GUID gGuid;
-
-$ ./guid --guid 00112233-4455-6677-8899-AABBCCDDEEFF
-
-[guid.std.text] 33221100-5544-7766-8899-aabbccddeeff
-  [uefi.memmap] 00112233-4455-6677-8899-aabbccddeeff
-  [ipmi.memmap] aabbccddeeff-8899-6677-4455-00112233
-
-[uefi.guid.struct]
-{ 0x33221100, 0x5544, 0x7766, { 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff } }
-
-[uefi.guid.define]
-#define GUID \
-  { \
-    0x33221100, 0x5544, 0x7766, { 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff } \
-  }
-extern EFI_GUID gGuid;
-
-```
-
-```shell
+```sh
 $ ./guid
 
-[guid.std.text] 6bf30348-d2e4-1744-81a1-53c3d00b690b
-  [uefi.memmap] 4803f36b-e4d2-4417-81a1-53c3d00b690b
-  [ipmi.memmap] 53c3d00b690b-81a1-4417-e4d2-4803f36b
+[guid.std.text] cd8f2d32-ffbd-754e-9e99-df55586420a3
+  [uefi.memmap] 322d8fcd-bdff-4e75-9e99-df55586420a3
+  [ipmi.memmap] df555864-20a3-9e99-4e75-bdff322d8fcd
 
 [uefi.guid.struct]
-{ 0x6bf30348, 0xd2e4, 0x1744, { 0x81, 0xa1, 0x53, 0xc3, 0xd0, 0x0b, 0x69, 0x0b } }
+{ 0xcd8f2d32, 0xffbd, 0x754e, { 0x9e, 0x99, 0xdf, 0x55, 0x58, 0x64, 0x20, 0xa3 } }
 
 [uefi.guid.define]
 #define GUID \
   { \
-    0x6bf30348, 0xd2e4, 0x1744, { 0x81, 0xa1, 0x53, 0xc3, 0xd0, 0x0b, 0x69, 0x0b } \
+    0xcd8f2d32, 0xffbd, 0x754e, { 0x9e, 0x99, 0xdf, 0x55, 0x58, 0x64, 0x20, 0xa3 } \
   }
 extern EFI_GUID gGuid;
 
-$ ./guid --upper
+$ ./guid --uppercase
 
-[guid.std.text] C02AE3B1-DB8F-7B42-A4ED-9F57714B705F
-  [uefi.memmap] B1E32AC0-8FDB-427B-A4ED-9F57714B705F
-  [ipmi.memmap] 9F57714B705F-A4ED-427B-8FDB-B1E32AC0
+[guid.std.text] 399C0535-FBE3-B84B-BF51-A693A5E30A2E
+  [uefi.memmap] 35059C39-E3FB-4BB8-BF51-A693A5E30A2E
+  [ipmi.memmap] A693A5E3-0A2E-BF51-4BB8-E3FB35059C39
 
 [uefi.guid.struct]
-{ 0xC02AE3B1, 0xDB8F, 0x7B42, { 0xA4, 0xED, 0x9F, 0x57, 0x71, 0x4B, 0x70, 0x5F } }
+{ 0x399C0535, 0xFBE3, 0xB84B, { 0xBF, 0x51, 0xA6, 0x93, 0xA5, 0xE3, 0x0A, 0x2E } }
 
 [uefi.guid.define]
 #define GUID \
   { \
-    0xC02AE3B1, 0xDB8F, 0x7B42, { 0xA4, 0xED, 0x9F, 0x57, 0x71, 0x4B, 0x70, 0x5F } \
+    0x399C0535, 0xFBE3, 0xB84B, { 0xBF, 0x51, 0xA6, 0x93, 0xA5, 0xE3, 0x0A, 0x2E } \
+  }
+extern EFI_GUID gGuid;
+```
+
+```sh
+./guid --uefi 00112233-4455-6677-8899-aabbccddeeff --standard --uppercase
+33221100-5544-7766-8899-AABBCCDDEEFF
+./guid -g 33221100-5544-7766-8899-AABBCCDDEEFF
+
+[guid.std.text] 33221100-5544-7766-8899-aabbccddeeff
+  [uefi.memmap] 00112233-4455-6677-8899-aabbccddeeff
+  [ipmi.memmap] aabbccdd-eeff-8899-6677-445500112233
+
+[uefi.guid.struct]
+{ 0x33221100, 0x5544, 0x7766, { 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff } }
+
+[uefi.guid.define]
+#define GUID \
+  { \
+    0x33221100, 0x5544, 0x7766, { 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff } \
   }
 extern EFI_GUID gGuid;
 
+$ ./guid --ipmi aabbccdd-eeff-8899-6677-445500112233 --standard
+33221100-5544-7766-8899-aabbccddeeff
+$ ./guid --uefi 00112233-4455-6677-8899-aabbccddeeff --standard
+33221100-5544-7766-8899-aabbccddeeff
 ```
