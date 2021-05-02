@@ -26,7 +26,7 @@ bool is_guid_stdtxt(char *guid) {
     char guid_stdtxt[] = "00112233-4455-6677-8899-AABBCCDDEEFF";
 
     for (int i = 0; guid[i] != '\0'; i++) {
-        if (i > sizeof(guid_stdtxt)) {
+        if (i >= sizeof(guid_stdtxt) - 1) {
             return false;
         }
         if (!isxdigit(guid[i]) && (guid[i] != guid_stdtxt[i])) {
